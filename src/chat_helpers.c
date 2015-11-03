@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include "chat.h"
 
 /* A helper function to check if the port number is
@@ -44,7 +45,7 @@ void client_startup_check(int argc, char * argv[]){
 	}	
 }
 
-void log(const char *msg, struct sockaddr_in * client){
+void server_log(const char *msg, struct sockaddr_in * client){
 	FILE *f = fopen("server.log", "a");
 	if (f == NULL)
 	{	

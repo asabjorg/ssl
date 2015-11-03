@@ -19,7 +19,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <signal.h>
-
+#include <arpa/inet.h>
 #include "chat.h"
 
 /* Secure socket layer headers */
@@ -262,9 +262,9 @@ void readline_callback(char *line)
 
 		memset(buffer, '\0', sizeof(buffer));
 
-		x = SSL_read(server_ssl, buffer, sizeof(buffer));
-		buffer[x] = '\0';
-		printf("SERVER says: %s\n",buffer);
+//		x = SSL_read(server_ssl, buffer, sizeof(buffer));
+//		buffer[x] = '\0';
+//		printf("SERVER says: %s\n",buffer);
 }
 
 int main(int argc, char **argv)

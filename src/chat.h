@@ -7,11 +7,9 @@ void server_startup_check(int argc, char * argv[]);
 
 void client_startup_check(int argc, char * argv[]);
 
-void log(const char *msg, struct sockaddr_in * client);
+void server_log(const char *msg, struct sockaddr_in * client);
 
 long int construct_client_key(struct sockaddr_in * client);
-
-gboolean listen_for_messages(gpointer key, gpointer value, gpointer fd_set_par);
 
 /* TODO keep an eye on this !*/
 /*typedef struct{
@@ -33,4 +31,4 @@ struct user{
 #define MAX_USERS 1024
 
 
-void handle_request_from_user(char * buffer, SSL * ssl, struct user the_user);
+void handle_request(char * buffer, SSL * ssl, struct user * the_user);

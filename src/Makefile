@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=gnu11 -O2 -g -Wall -Wno-comment -Wno-unused-variable -Wextra -Wformat=2 $(shell pkg-config glib-2.0 openssl --cflags)
+CFLAGS = -std=gnu11 -O2 -g -Wall -Wno-unused-variable -Wno-unused-parameter -Wextra -Wformat=2 $(shell pkg-config glib-2.0 openssl --cflags)
 
 all: chatd chat 
 

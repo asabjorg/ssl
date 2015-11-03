@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <arpa/inet.h>
 #include <glib.h>
 
 #include "chat.h"
@@ -34,60 +34,13 @@
 #define ERROR_CHECK_NOT(status, msg) if(!status) { perror(msg); }
 #define ERROR_CHECK_NOT_NULL(status, msg) if((status == NULL)) { perror(msg); }
 
-
-GTree * clients;
 const char * chat_rooms[3];
-GTree * chat_room_users[3];
+struct user * users_iceland[1024];
+struct user * users_lithuania[1024];
+struct user * users_germany[1024];
 
-
-/* This can be used to build instances of GTree that index on
-   the address of a connection. */
-int sockaddr_in_cmp(const void *addr1, const void *addr2)
-{
-        const struct sockaddr_in *_addr1 = addr1;
-        const struct sockaddr_in *_addr2 = addr2;
-
-        /* If either of the pointers is NULL or the addresses
-           belong to different families, we abort. */
-		g_assert((_addr1 != NULL) && (_addr2 != NULL) &&
-		(_addr1->sin_family == _addr2->sin_family));
-
-        if (_addr1->sin_addr.s_addr < _addr2->sin_addr.s_addr) {
-                return -1;
-        } else if (_addr1->sin_addr.s_addr > _addr2->sin_addr.s_addr) {
-                return 1;
-        } else if (_addr1->sin_port < _addr2->sin_port) {
-                return -1;
-        } else if (_addr1->sin_port > _addr2->sin_port) {
-                return 1;
-        }
-        return 0;
-}
-
-gboolean listen_for_messages(gpointer key, gpointer value, gpointer fd_set_par){
-
-		
-
-	struct user * le_user = value;
-	struct sockaddr_in address = le_user->client;
-	SSL * ssl = le_user->ssl;
-	int fd = le_user->fd;
-	int status = 0;	
-	printf("HERE %d\n", le_user->fd);
-/*	if (FD_ISSET(fd, (fd_set *)fd_set_par)){
-		char msg[1024];
-		status = SSL_read(ssl, msg, sizeof(msg) - 1);
-		ERROR_CHECK_NEG_OR_0(status, "ERROR: Error reading in listen_for_messages\n");
-		msg[status] = '\0';
-		printf("User:%d says: %s\n", ntohs(address.sin_port), msg);
-	}
-*/
-	return FALSE;	
-}
-
-void handle_request_from_user(char * buffer, SSL * ssl, struct user the_user){
+void handle_request(char * buffer, SSL * ssl, struct user * the_user){
 	int status = 0;
-	printf("BUFFER %s\n", buffer);	
 		
 	if(strncmp("/list", buffer, 5) == 0){
 		char rooms[100];
@@ -97,59 +50,71 @@ void handle_request_from_user(char * buffer, SSL * ssl, struct user the_user){
 			strcat(rooms, "\n");
 		}
 		strcat(rooms, "\0");
-		printf("rooms %s\n", rooms);
 		status = SSL_write(ssl, rooms, sizeof(rooms));
 		ERROR_CHECK_NEG_OR_0(status, "ERROR: Error in sending chat rooms.\n");
-	}
+	}// ENFOF IF LIST
 
 	else if(strncmp("/join", buffer, 5) == 0){
-		// buffer fucked up
 		char * room = strtok(buffer, " \n\r");
 		room = strtok(NULL, " \n\r");
 		if(strcmp(room, "Iceland") == 0){
-			char str[15];
-			sprintf(str, "%d", the_user.fd);
-			printf("HEY %s\n", str);
-			g_tree_insert(chat_room_users[0], (void *) the_user.fd, (void *) &the_user);
-			int treesize = g_tree_nnodes(chat_room_users[0]);
-			printf("SIZE %d\n", treesize);	
 			
-		} 	
-	}
-	
-	
-}
-
+			printf("user.fd inside if Iceland is %d\n",the_user->fd);
+			int index = the_user->fd;
+			users_lithuania[index] = NULL;
+			users_germany[index] = NULL;
+			users_iceland[index] = the_user;
+		}	
+		 	
+		else if(strcmp(room, "Lithuania") == 0){
+        	int index = the_user->fd;
+			users_iceland[index] = NULL;
+			users_germany[index] = NULL;
+            users_lithuania[index] = the_user;
+        }
+		else if(strcmp(room, "Germany") == 0){
+			int index = the_user->fd;
+			users_iceland[index] = NULL;
+			users_lithuania[index] = NULL;
+			users_germany[index] = the_user;
+    	}
+		else{
+			printf("invalid chatroom\n");
+		}
+		for(int i = 0; i < 1024; i++){
+			if(users_iceland[i] != NULL) printf("User %d is in room Iceland\n", users_iceland[i]->fd);
+			if(users_lithuania[i] != NULL) printf("User %d is in room Lithuania\n", users_lithuania[i]->fd);
+			if(users_germany[i] != NULL) printf("User %d is in room Germany\n", users_germany[i]->fd);
+		}
+			
+	}// ENDOF IF JOIN	
+}// ENDOF handle_request
 
 int main(int argc, char **argv)
 {
 	/* Checks if parameters are available and valid */
 	server_startup_check(argc, argv);
-	int opt = TRUE;
-	int master_socket;
-	int status = 0;
-	int sock;
-	int listen_socket;
+	
+	int status = 0, opt = TRUE, master_socket, max_sd, sd, new_socket, valread, activity;
 	struct sockaddr_in server, client;
     char buffer[4096];
-	SSL * server_ssld;
 	SSL_CTX * ssl_ctx;
+	int client_sockets[MAX_USERS];	
+	SSL * ssls[MAX_USERS];
+	fd_set rfds;
 
+	for(int i = 0 ; i < MAX_USERS; i++ ){
+			client_sockets[i] = 0; 
+			ssls[i]=NULL;
+			users_iceland[i] = NULL;
+			users_lithuania[i] = NULL;
+			users_germany[i] = NULL;
+	}
 	
 	chat_rooms[0] = "Iceland";
 	chat_rooms[1] = "Lithuania";
 	chat_rooms[2] = "Germany";
-
-	GTree * tree0 = g_tree_new(strcmp);
-
-		
-	chat_room_users[0] = tree0;	
-	chat_room_users[1] = g_tree_new(strcmp);	
-	chat_room_users[2] = g_tree_new(strcmp);	
 	
-	/* Initilize a client tree */
-	clients = g_tree_new(sockaddr_in_cmp);
-
 	/* Load encryption and hasing algortihms, and error strings */
 	SSL_library_init();
 	SSL_load_error_strings();
@@ -177,7 +142,7 @@ int main(int argc, char **argv)
 	master_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	ERROR_CHECK_NEG(status, "ERROR: Error creating listen socket.\n");
 
-	if( setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0 )
+	if(setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0)
     {
         perror("setsockopt");
         exit(EXIT_FAILURE);
@@ -196,26 +161,18 @@ int main(int argc, char **argv)
 	status = listen(master_socket, MAX_USERS);
 	ERROR_CHECK_NEG(status, "ERROR: Error while listening to listen_socket.\n");
 
-	 //accept the incoming connection
-	int addrlen = sizeof(client);
-	printf("Waiting for connections ...\n");
+	printf("Server is ready and waiting for connections.\n");
 
-	int max_sd, sd, new_socket, valread, activity;
-	fd_set rfds;
-	int client_sockets[MAX_USERS];	
-	SSL * ssls[MAX_USERS];
-	for(int i = 0 ; i < MAX_USERS; i++ ){client_sockets[i] = 0; ssls[i]=NULL;}
 	
 	while(TRUE){
         struct timeval tv;
-		tv.tv_sec = 2;
+		tv.tv_sec = 5;
 		tv.tv_usec = 0;
 		FD_ZERO(&rfds);
-        int retval;
 		FD_SET(master_socket, &rfds);
 		max_sd = master_socket;
 	
-		//add child sockets to set
+		/* add child sockets to set */
 		for ( int i = 0 ; i < MAX_USERS ; i++){
 			//socket descriptor
 			sd = client_sockets[i];
@@ -237,7 +194,6 @@ int main(int argc, char **argv)
         }
 		if (FD_ISSET(master_socket, &rfds)) 
         {
-
 
             if ((new_socket = accept(master_socket, (struct sockaddr *)&client, (socklen_t*)&client))<0)
             {
@@ -288,7 +244,7 @@ int main(int argc, char **argv)
 			//Check if it was for closing , and also read the incoming message
 				if ((valread = SSL_read(currSSL, buffer, sizeof(buffer)-1)) == 0)
                 {//Somebody disconnected , get his details and print
-					printf("Host disconnected , ip %s , port %d \n" , inet_ntoa(client.sin_addr) , ntohs(client.sin_port));
+					server_log("disconnected", &client);
 					//Close the socket and mark as 0 in list for reuse
 					close( sd );
 			        client_sockets[i] = 0;
@@ -298,12 +254,12 @@ int main(int argc, char **argv)
 					buffer[valread] = '\0';
                     //send(sd , buffer , strlen(buffer) , 0 );
                     printf("--read: %s\n", buffer);
-					struct user the_user;
-					the_user.fd = sd;
-					the_user.ssl = currSSL;
-					the_user.client = client;
-
-					handle_request_from_user(&buffer[0], currSSL, the_user);
+					struct user * the_user = malloc(sizeof(struct user));
+					the_user->fd = sd;
+					the_user->ssl = currSSL;
+					the_user->client = client;
+			
+					handle_request(&buffer[0], currSSL, the_user);
 				}
 			}
 		}
