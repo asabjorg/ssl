@@ -2,7 +2,6 @@
 
 #include <openssl/ssl.h>
 
-void handle_request(char * buffer, SSL * ssl);
 
 void server_startup_check(int argc, char * argv[]);
 
@@ -32,3 +31,6 @@ struct user{
 };
 
 #define MAX_USERS 1024
+
+
+void handle_request_from_user(char * buffer, SSL * ssl, struct user the_user);

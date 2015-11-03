@@ -66,6 +66,6 @@ long int construct_client_key(struct sockaddr_in * client){
 	char key[40];
 	snprintf(key, 40, "%d%d", client->sin_addr.s_addr, ntohs(client->sin_port));
 	long int longint = atol(key);
-
+	printf(" in helpers %ld\n", longint);
 	return longint;
 }

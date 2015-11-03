@@ -37,6 +37,7 @@
 
 GTree * clients;
 const char * chat_rooms[3];
+GTree * chat_room_users[3];
 
 
 /* This can be used to build instances of GTree that index on
@@ -65,26 +66,28 @@ int sockaddr_in_cmp(const void *addr1, const void *addr2)
 
 gboolean listen_for_messages(gpointer key, gpointer value, gpointer fd_set_par){
 
+		
+
 	struct user * le_user = value;
 	struct sockaddr_in address = le_user->client;
 	SSL * ssl = le_user->ssl;
 	int fd = le_user->fd;
 	int status = 0;	
-
-	if (FD_ISSET(fd, (fd_set *)fd_set_par)){
+	printf("HERE %d\n", le_user->fd);
+/*	if (FD_ISSET(fd, (fd_set *)fd_set_par)){
 		char msg[1024];
 		status = SSL_read(ssl, msg, sizeof(msg) - 1);
 		ERROR_CHECK_NEG_OR_0(status, "ERROR: Error reading in listen_for_messages\n");
 		msg[status] = '\0';
 		printf("User:%d says: %s\n", ntohs(address.sin_port), msg);
 	}
-
+*/
 	return FALSE;	
 }
 
-void handle_request(char * buffer, SSL * ssl){
+void handle_request_from_user(char * buffer, SSL * ssl, struct user the_user){
 	int status = 0;
-	
+	printf("BUFFER %s\n", buffer);	
 		
 	if(strncmp("/list", buffer, 5) == 0){
 		char rooms[100];
@@ -97,6 +100,21 @@ void handle_request(char * buffer, SSL * ssl){
 		printf("rooms %s\n", rooms);
 		status = SSL_write(ssl, rooms, sizeof(rooms));
 		ERROR_CHECK_NEG_OR_0(status, "ERROR: Error in sending chat rooms.\n");
+	}
+
+	else if(strncmp("/join", buffer, 5) == 0){
+		// buffer fucked up
+		char * room = strtok(buffer, " \n\r");
+		room = strtok(NULL, " \n\r");
+		if(strcmp(room, "Iceland") == 0){
+			char str[15];
+			sprintf(str, "%d", the_user.fd);
+			printf("HEY %s\n", str);
+			g_tree_insert(chat_room_users[0], (void *) the_user.fd, (void *) &the_user);
+			int treesize = g_tree_nnodes(chat_room_users[0]);
+			printf("SIZE %d\n", treesize);	
+			
+		} 	
 	}
 	
 	
@@ -121,7 +139,13 @@ int main(int argc, char **argv)
 	chat_rooms[0] = "Iceland";
 	chat_rooms[1] = "Lithuania";
 	chat_rooms[2] = "Germany";
-	
+
+	GTree * tree0 = g_tree_new(strcmp);
+
+		
+	chat_room_users[0] = tree0;	
+	chat_room_users[1] = g_tree_new(strcmp);	
+	chat_room_users[2] = g_tree_new(strcmp);	
 	
 	/* Initilize a client tree */
 	clients = g_tree_new(sockaddr_in_cmp);
@@ -221,8 +245,6 @@ int main(int argc, char **argv)
                 exit(EXIT_FAILURE);
             }
           
-            //inform user of socket number - used in send and receive commands
-////		            printf("New connection , socket fd is %d , ip is : %s , port : %d \n" , new_socket , inet_ntoa(client.sin_addr) , ntohs(client.sin_port));
         		
 			// SSL SHIT
 			SSL * newssl = SSL_new(ssl_ctx);
@@ -276,7 +298,12 @@ int main(int argc, char **argv)
 					buffer[valread] = '\0';
                     //send(sd , buffer , strlen(buffer) , 0 );
                     printf("--read: %s\n", buffer);
-					handle_request(&buffer[0], currSSL);
+					struct user the_user;
+					the_user.fd = sd;
+					the_user.ssl = currSSL;
+					the_user.client = client;
+
+					handle_request_from_user(&buffer[0], currSSL, the_user);
 				}
 			}
 		}

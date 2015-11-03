@@ -180,7 +180,7 @@ void readline_callback(char *line)
                 write(STDOUT_FILENO, "Usage: /join chatroom\n", 22);
                 fsync(STDOUT_FILENO);
                 rl_redisplay();
-                return;
+//                return;
 			}
 
           	char *chatroom = strdup(&(line[i]));
@@ -190,7 +190,7 @@ void readline_callback(char *line)
             free(prompt);
             prompt = NULL; /* What should the new prompt look like? */
 			rl_set_prompt(prompt);
-            return;
+            //return;
     	}
         if (strncmp("/list", line, 5) == 0) {
                 /* Query all available chat rooms */
