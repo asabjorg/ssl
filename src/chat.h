@@ -2,6 +2,8 @@
 
 #include <openssl/ssl.h>
 
+void handle_request(char * buffer, SSL * ssl);
+
 void server_startup_check(int argc, char * argv[]);
 
 void client_startup_check(int argc, char * argv[]);

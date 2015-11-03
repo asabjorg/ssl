@@ -194,7 +194,7 @@ void readline_callback(char *line)
     	}
         if (strncmp("/list", line, 5) == 0) {
                 /* Query all available chat rooms */
-                return;
+//                return;
         }
         if (strncmp("/roll", line, 5) == 0) {
                 /* roll dice and declare winner. */
@@ -260,9 +260,11 @@ void readline_callback(char *line)
         snprintf(buffer, 255, "%s\n", line);
 		int x = SSL_write(server_ssl, buffer, sizeof(buffer));
 
-		//ssize_t x = SSL_read(server_ssl, buffer, sizeof(buffer));
-		//buffer[x] = '\0';
-	//	printf("SERVER says: %s\n",buffer);
+		memset(buffer, '\0', sizeof(buffer));
+
+		x = SSL_read(server_ssl, buffer, sizeof(buffer));
+		buffer[x] = '\0';
+		printf("SERVER says: %s\n",buffer);
 }
 
 int main(int argc, char **argv)

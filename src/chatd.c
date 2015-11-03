@@ -36,6 +36,8 @@
 
 
 GTree * clients;
+const char * chat_rooms[3];
+
 
 /* This can be used to build instances of GTree that index on
    the address of a connection. */
@@ -80,6 +82,26 @@ gboolean listen_for_messages(gpointer key, gpointer value, gpointer fd_set_par){
 	return FALSE;	
 }
 
+void handle_request(char * buffer, SSL * ssl){
+	int status = 0;
+	
+		
+	if(strncmp("/list", buffer, 5) == 0){
+		char rooms[100];
+		memset(rooms, '\0', sizeof(rooms));
+		for(int i = 0; i < 3; i++){
+			strcat(rooms, chat_rooms[i]);
+			strcat(rooms, "\n");
+		}
+		strcat(rooms, "\0");
+		printf("rooms %s\n", rooms);
+		status = SSL_write(ssl, rooms, sizeof(rooms));
+		ERROR_CHECK_NEG_OR_0(status, "ERROR: Error in sending chat rooms.\n");
+	}
+	
+	
+}
+
 
 int main(int argc, char **argv)
 {
@@ -94,6 +116,12 @@ int main(int argc, char **argv)
     char buffer[4096];
 	SSL * server_ssld;
 	SSL_CTX * ssl_ctx;
+
+	
+	chat_rooms[0] = "Iceland";
+	chat_rooms[1] = "Lithuania";
+	chat_rooms[2] = "Germany";
+	
 	
 	/* Initilize a client tree */
 	clients = g_tree_new(sockaddr_in_cmp);
@@ -248,6 +276,7 @@ int main(int argc, char **argv)
 					buffer[valread] = '\0';
                     //send(sd , buffer , strlen(buffer) , 0 );
                     printf("--read: %s\n", buffer);
+					handle_request(&buffer[0], currSSL);
 				}
 			}
 		}
