@@ -139,6 +139,22 @@ struct user * users_germany[MAX_USERS];
 
 	/* If we get here it means there was no command, just a chat message*/
 	else{
+		//TODO SEND TO ALL
+		//
+
+		char temp[sizeof(buffer) + sizeof(usernames[fd]) + 7];
+		memset(temp, '\0', sizeof(temp));
+		strcpy(temp, usernames[fd]);
+		strcat(temp, " says: ");
+		strcat(temp, buffer);
+		for(int i = 0; i < MAX_USERS; i++){
+			if(all_users[i] != NULL){
+				
+				SSL_write(all_users[i]->ssl, temp, sizeof(temp));
+			}
+		}
+
+
 		printf("DEBUG: inside 'this dude says' usernames[fd] is %s\n", usernames[fd]);
 		printf("%s says: %s\n", usernames[fd], buffer);
 	}
@@ -226,7 +242,6 @@ int main(int argc, char **argv)
 	ERROR_CHECK_NEG(status, "ERROR: Error while listening to listen_socket.\n");
 
 	printf("Server is ready and waiting for connections.\n");
-
 	
 	while(TRUE){
         struct timeval tv;
@@ -254,14 +269,20 @@ int main(int argc, char **argv)
 		activity = select( max_sd + 1 , &rfds , NULL , NULL , &tv);
 		if ((activity < 0) && (errno!=EINTR)) 
         {
-            printf("select error");
+            printf("ERROR: select error\n");
         }
-		if (FD_ISSET(master_socket, &rfds)) 
-        {
+		else if (activity > 0 && FD_ISSET(master_socket, &rfds)){
 
-            new_socket = accept(master_socket, (struct sockaddr *)&client, (socklen_t*)&client);
+			socklen_t len;
+			len = (socklen_t) sizeof(client);
+
+            new_socket = accept(master_socket, (struct sockaddr *)&client, &len);
 			ERROR_CHECK_NEG(new_socket, "ERROR: Error during accept.\n");
-        		
+
+			printf("PORT %d\n", ntohs(client.sin_port));
+
+			server_log("connected", &client);
+	
 			/* SSL connection initialization */
 			SSL * newssl = SSL_new(ssl_ctx);
 			SSL_set_fd(newssl, new_socket);

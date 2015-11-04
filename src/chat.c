@@ -410,6 +410,7 @@ int main(int argc, char **argv)
 		printf("DEBUG: Not equal\n");
 	}
 		
+	int max_fd;
 
 	printf("INFO: Server says: %s\n" ,buffer);
 
@@ -417,16 +418,21 @@ int main(int argc, char **argv)
          */
         prompt = strdup("> ");
         rl_callback_handler_install(prompt, (rl_vcpfunc_t*) &readline_callback);
+
         while (active) {
 	    	fd_set rfds;
 			struct timeval timeout;
 
 			FD_ZERO(&rfds);
     	    FD_SET(STDIN_FILENO, &rfds);
+			FD_SET(server_fd, &rfds);
+			max_fd = server_fd;
 			timeout.tv_sec = 5;
 			timeout.tv_usec = 0;
-		
-            int r = select(STDIN_FILENO + 1, &rfds, NULL, NULL, &timeout);
+			if(STDIN_FILENO > server_fd){
+            	max_fd = STDIN_FILENO;
+       		 }	
+            int r = select(max_fd + 1, &rfds, NULL, NULL, &timeout);
             if (r < 0) {
             	if (errno == EINTR) {
                                 /* This should either retry the call or
@@ -446,14 +452,39 @@ int main(int argc, char **argv)
                          to reprint the current input line. */
 				rl_redisplay();
                 continue;
-           }
+           }        
 			if (FD_ISSET(STDIN_FILENO, &rfds)) {
-				rl_callback_read_char();
-            }
-        /* Handle messages from the server here! */
-        }
-        /* replace by code to shutdown the connection and exit
-           the program. */
+            	rl_callback_read_char();
+        	}
+				
+	            /* Check if socket has message */
+    	        if(FD_ISSET(server_fd, &rfds)){
+        	        memset(buffer, '\0', sizeof(buffer));
+            	    /* SSL_read from server since there is a message to read */          
+                	int n = SSL_read(server_ssl, buffer, sizeof(buffer)-1);
+                	/* If size of message is 0 then the server closed the connection, cleanup. */
+                	if(n == 0){
+                   	 	fprintf(stdout, "Server Closed the Connection! - Exiting\n");
+                   		fflush(stdout);
+                    	SSL_shutdown(server_ssl);
+                    	close(server_fd);
+                    	SSL_free(server_ssl);
+                    	SSL_CTX_free(ssl_ctx);
+                    	rl_callback_handler_remove();
+
+                    	fsync(STDOUT_FILENO);  
+                    	exit(0);
+                	}
+                	/* Print the received message on the screen */
+                	buffer[n] = '\0';
+                	write(STDOUT_FILENO, buffer, strlen(buffer));
+					fsync(STDOUT_FILENO);
+					rl_redisplay();
+
+
+        	}
+	
+	}
 }
 
 
