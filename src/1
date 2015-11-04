@@ -1,1 +1,1 @@
-./chat localhost $(/labs/tsam15/my_port)
+./chat 127.0.0.1 $(/labs/tsam15/my_port)
