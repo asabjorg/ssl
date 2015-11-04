@@ -57,8 +57,15 @@ void server_log(const char *msg, struct sockaddr_in * client){
 
     if((fd = fopen("logs/server.log", "a")) == NULL){
         perror("open()");
+        exit(EXIT_FAILURE);
     }
 
+    /*
+    	althernative way for reading IP address
+		int ipAddr = client->sin_addr.s_addr;
+		char ip_string[INET_ADDRSTRLEN];
+		inet_ntop( AF_INET, &ipAddr, ip_string, INET_ADDRSTRLEN );
+    */
     char timestamp[100];
     memset(timestamp, '\0', sizeof(timestamp));
     time_t now = time(NULL);
