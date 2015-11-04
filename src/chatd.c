@@ -211,7 +211,7 @@ int main(int argc, char **argv)
             status = SSL_write(newssl, "Welcome.\n", sizeof("Welcome.\n"));
               
             printf("Welcome message sent with status %d\n", status);
-			 
+
 			int xx = SSL_read(newssl, buffer, sizeof(buffer)-1);
 		
 			buffer[xx] = '\0';

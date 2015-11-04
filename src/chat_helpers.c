@@ -14,6 +14,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "chat.h"
+#include <sys/stat.h>
 
 /* A helper function to check if the port number is
  * missing or invalid*/
@@ -46,20 +47,26 @@ void client_startup_check(int argc, char * argv[]){
 }
 
 void server_log(const char *msg, struct sockaddr_in * client){
-	FILE *f = fopen("server.log", "a");
-	if (f == NULL)
-	{	
-    	printf("Error opening file!\n");
-    	exit(EXIT_FAILURE);
-	}
+	FILE *fd;
+    struct stat st = {0};
 
-	int ipAddr = client->sin_addr.s_addr;
-	char ip_string[INET_ADDRSTRLEN];
-	inet_ntop( AF_INET, &ipAddr, ip_string, INET_ADDRSTRLEN );
-	
-	fprintf(f, "%s %s : %s:%d %s\n", __DATE__, __TIME__, ip_string, ntohs(client->sin_port), msg);
+    /* if folder does not exists, make folder! */
+    if (stat("logs", &st) == -1) {
+        mkdir("logs", 0700);
+    }
 
-	fclose(f);
+    if((fd = fopen("logs/server.log", "a")) == NULL){
+        perror("open()");
+    }
+
+    char timestamp[100];
+    memset(timestamp, '\0', sizeof(timestamp));
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    strftime(timestamp, sizeof(timestamp)-1, "%Y-%m-%dT%H:%M:%S%z", t);
+
+    fprintf(fd, "%s : %s:%d %s\n", timestamp, inet_ntoa(client->sin_addr), ntohs(client->sin_port), msg);
+    fclose(fd);
 }
 
 long int construct_client_key(struct sockaddr_in * client){
