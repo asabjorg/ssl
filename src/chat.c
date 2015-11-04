@@ -235,13 +235,14 @@ void readline_callback(char *line)
                         rl_redisplay();
                         return;
                 }
-                char *receiver = strndup(&(line[i]), j - i - 1);
-                char *message = strndup(&(line[j]), j - i - 1);
 
-                /* Send private message to receiver. */
-
-                return;
+            /* Send private message to receiver. */
+        	snprintf(buffer, 255, "%s", line);
+			SSL_write(server_ssl, buffer, sizeof(buffer));
+			return;
+				
         }
+
         if (strncmp("/user", line, 5) == 0) {
             int i = 5;
             /* Skip whitespace */

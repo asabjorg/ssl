@@ -82,6 +82,31 @@ struct user * users_germany[MAX_USERS];
 
 			}//ENDOF IF WHO
 
+			else if(strncmp("/say", buffer, 4) == 0){
+				char * privmsg = NULL;
+				int b = 0;
+
+				for(unsigned int i = 0; i < strlen(buffer); i++){
+					if(buffer[i] == ' '){
+						b++;
+					}
+					if(b == 2){
+						privmsg = &buffer[i+1];
+						break;
+					}
+				}
+				char * to = strtok(buffer, " \r\n");
+				to = strtok(NULL, " \r\n");
+				
+				for(int i = 0; i < MAX_USERS; i++){
+					if(all_users[i] != NULL){
+						if(strcmp(usernames[i], to) == 0){
+							SSL_write(all_users[i]->ssl, privmsg, sizeof(privmsg));
+						}
+					}
+				}
+			}
+
 			else if(strncmp("/user", buffer, 5) == 0){
 				//all_users[fd]->username = &buffer[6];
 				char * tempusername = strtok(buffer, " \r\n");
