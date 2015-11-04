@@ -47,55 +47,59 @@ struct user * users_germany[MAX_USERS];
 
 /*
  * This method takes care of handling requests according
- * to their prefix
- * */
-void handle_request(char * buffer, SSL * ssl, struct user * the_user){
-	int status = 0;
-	int fd = the_user->fd;
-	char * usern = the_user->username;
-	
-	if(strncmp("/list", buffer, 5) == 0){
-		char rooms[100];
-		memset(rooms, '\0', sizeof(rooms));
-		for(int i = 0; i < 3; i++){
-			strcat(rooms, chat_rooms[i]);
-			strcat(rooms, "\n");
-		}
-		strcat(rooms, "\0");
-		status = SSL_write(ssl, rooms, sizeof(rooms));
-		ERROR_CHECK_NEG_OR_0(status, "ERROR: Error in sending chat rooms.\n");
-	}// ENFOF IF LIST
+		 * to their prefix
+		 * */
+		void handle_request(char * buffer, SSL * ssl, struct user * the_user){
+			int status = 0;
+			int fd = the_user->fd;
+			printf("DEBUG: Start of handle rq NAME:|%s|\n||fd is %d \n", usernames[fd], fd);
+			
+			if(strncmp("/list", buffer, 5) == 0){
+				char rooms[100];
+				memset(rooms, '\0', sizeof(rooms));
+				for(int i = 0; i < 3; i++){
+					strcat(rooms, chat_rooms[i]);
+					strcat(rooms, "\n");
+				}
+				strcat(rooms, "\0");
+				status = SSL_write(ssl, rooms, sizeof(rooms));
+				ERROR_CHECK_NEG_OR_0(status, "ERROR: Error in sending chat rooms.\n");
+			}// ENFOF IF LIST
 
-	else if(strncmp("/who", buffer, 4) == 0){
-		char users[1000];
-		memset(users, '\0', sizeof(users));
-		for(int i = 0; i < MAX_USERS; i++){
-			if(all_users[i] != NULL){
-				char * usern = all_users[i]->username;
-				strcat(users, usern);
-				strcat(users, "\n");
-			}
-		}
-		strcat(users, "\0");
-		int n = SSL_write(the_user->ssl, users, sizeof(users));
-		if(n <= 0) printf("ERROR SENDING\n");
+			else if(strncmp("/who", buffer, 4) == 0){
+				char users[1000];
+				memset(users, '\0', sizeof(users));
+				for(int i = 0; i < MAX_USERS; i++){
+					if(all_users[i] != NULL){
+						char * usern = usernames[fd];
+						strcat(users, usern);
+						strcat(users, "\n");
+					}
+				}
+				strcat(users, "\0");
+				printf("DEBUG: Server about to send this to client: %s\n", users);
+				int n = SSL_write(the_user->ssl, users, sizeof(users));
+				if(n <= 0) printf("ERROR SENDING\n");
 
 
-	}//ENDOF IF WHO
+			}//ENDOF IF WHO
 
-	else if(strncmp("/user", buffer, 5) == 0){
-		all_users[fd]->username = &buffer[6];
-		usernames[fd] = &buffer[6];
-		SSL_write(the_user->ssl, "Your username has been changed.\n", 
-			sizeof("Your username has been changed.\n"));
-
+			else if(strncmp("/user", buffer, 5) == 0){
+				//all_users[fd]->username = &buffer[6];
+				char * tempusername = strtok(buffer, " \r\n");
+				tempusername = strtok(NULL, " \r\n");
+				usernames[fd] = tempusername;
+				SSL_write(the_user->ssl, "Your username has been changed.\n", 
+					sizeof("Your username has been changed.\n"));
+				
+				printf("DEBUG: usernames[fd] inside /user in server %s\n", usernames[fd]);
 	}//ENDOF IF USER
 
 
 
 	else if(strncmp("/join", buffer, 5) == 0){
-		char * room = strtok(buffer, " \n\r");
-		room = strtok(NULL, " \n\r");
+		char * room = strtok(buffer, " \r\n");
+		room = strtok(NULL, " \r\n");
 		if(strcmp(room, "Iceland") == 0){
 			/* Add to chat room and make sure the user leaves other chat rooms*/	
 			int index = the_user->fd;
@@ -135,7 +139,8 @@ void handle_request(char * buffer, SSL * ssl, struct user * the_user){
 
 	/* If we get here it means there was no command, just a chat message*/
 	else{
-		printf("%s says: %s\n", all_users[fd]->username, buffer);
+		printf("DEBUG: inside 'this dude says' usernames[fd] is %s\n", usernames[fd]);
+		printf("%s says: %s\n", usernames[fd], buffer);
 	}
 
 }// ENDOF handle_request
@@ -151,7 +156,7 @@ void initialize(){
         users_lithuania[i] = NULL;
         users_germany[i] = NULL;
 		all_users[i] = NULL;
-		usernames[i] = "";
+		usernames[i] = 	NULL;
     }
 
     chat_rooms[0] = "Iceland";
@@ -289,7 +294,6 @@ int main(int argc, char **argv)
 			new_user->fd = new_socket;
 			new_user->ssl = newssl;
 			new_user->client = client;
-			new_user->username = "anonymous";	
 			usernames[new_socket] = "anonymous";
 			all_users[new_socket] = new_user;
 			
@@ -305,6 +309,7 @@ int main(int argc, char **argv)
 			//Check if it was for closing , and also read the incoming message
 				if ((valread = SSL_read(currSSL, buffer, sizeof(buffer)-1)) == 0)
                 {
+					buffer[valread] = '\0';
 					/* The client has disconnected */
 					server_log("disconnected", &client);
 
@@ -330,7 +335,7 @@ int main(int argc, char **argv)
 			        if(strncmp("/bye", buffer, 4) == 0){
     	        	    /* Close the connection and reset all user data*/
 						server_log("disconnected", &(all_users[sd]->client));
-						printf("%s has left the chat.\n", all_users[sd]->username);
+						printf("%s has left the chat.\n", usernames[sd]);
 						close(sd);
 	        	        client_sockets[i] = 0;
 						ssls[i]= NULL;

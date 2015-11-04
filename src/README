@@ -1,12 +1,30 @@
-KEY PASS PHRASES: "0000"
+PASS PHRASES FOR KEYS
+====================
+0000
 
-Protocol
+ABOUT
+=====
+When a user starts the chat client the certificate and private
+key get loaded and checked. The same thing happens when the
+server gets started. 
+
+PROTOCOL
 ========
-
 Explain your protocol here.
 
 
-ERRORS
-=====
-The /who command crashes the clients output,
-any command run after that will have wrong output
+Part 5. Passwords should be stored encrypted in a database on
+the server side. 
+Part 6. Private messages should NOT be stored anywhere because
+we respect our user's privacy.
+The consequences of this decision would be that no previous
+private messages are ever reachable, however our user's
+privacy will never be breached.
+
+
+IMPLEMENTATION ERRORS
+====================
+-The /who command crashes the clients output,
+any command run after that will have wrong output.
+-The /user command changes the username at first but
+afterwards for some reason it gets lost
