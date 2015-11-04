@@ -267,13 +267,29 @@ void readline_callback(char *line)
 //		printf("SERVER says: %s\n",buffer);
 }
 
+/* Function to print out custom messages */
+void printMsg(char *print){
+    fprintf(stdout, "%s\n", print);
+    fflush(stdout);
+}
+
 int main(int argc, char **argv)
 {
-
 	client_startup_check(argc, argv);
-	int status = 0;
+	int status = 0, port_n;
 	struct sockaddr_in server, client;
 	char buffer[4096];
+
+    if(argc != 3){
+        printMsg("Incorrect number of arguments.");
+        return 0;
+    }
+
+    /* Read in port number */
+    if(!sscanf(&argv[2][0], "%d", &port_n)){
+        printMsg("Needs port number.");
+        return 0;
+    }
 
 	/* Initialize OpenSSL */
 	SSL_library_init();	/* Loads encryption and hash algorithms fro SSL */
@@ -315,8 +331,11 @@ int main(int argc, char **argv)
 
 	memset (&server, '\0', sizeof(server));
 	server.sin_family = AF_INET;
-	server.sin_port = htons(7328);       /* Server Port number */
+	server.sin_port = htons(port_n);       /* Server Port number */
 	server.sin_addr.s_addr = inet_addr("127.0.0.1"); /* Server IP */
+
+    printf("Client is ready and running on port %d\n", port_n);
+    fflush(stdout);
 
 	/* Establish a TCP/IP connection to the SSL client */
  
@@ -399,6 +418,6 @@ int main(int argc, char **argv)
         }
         /* replace by code to shutdown the connection and exit
            the program. */
-
-
 }
+
+
