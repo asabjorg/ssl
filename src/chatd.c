@@ -52,7 +52,6 @@ struct user * users_germany[MAX_USERS];
 		void handle_request(char * buffer, SSL * ssl, struct user * the_user){
 			int status = 0;
 			int fd = the_user->fd;
-			printf("DEBUG: Start of handle rq NAME:|%s|\n||fd is %d \n", usernames[fd], fd);
 			
 			if(strncmp("/list", buffer, 5) == 0){
 				char rooms[100];
@@ -77,7 +76,6 @@ struct user * users_germany[MAX_USERS];
 					}
 				}
 				strcat(users, "\0");
-				printf("DEBUG: Server about to send this to client: %s\n", users);
 				int n = SSL_write(the_user->ssl, users, sizeof(users));
 				if(n <= 0) printf("ERROR SENDING\n");
 
@@ -91,42 +89,38 @@ struct user * users_germany[MAX_USERS];
 				usernames[fd] = tempusername;
 				SSL_write(the_user->ssl, "Your username has been changed.\n", 
 					sizeof("Your username has been changed.\n"));
-				
-				printf("DEBUG: usernames[fd] inside /user in server %s\n", usernames[fd]);
-	}//ENDOF IF USER
+			}//ENDOF IF USER
 
-
-
-	else if(strncmp("/join", buffer, 5) == 0){
-		char * room = strtok(buffer, " \r\n");
-		room = strtok(NULL, " \r\n");
-		if(strcmp(room, "Iceland") == 0){
-			/* Add to chat room and make sure the user leaves other chat rooms*/	
-			int index = the_user->fd;
-			users_lithuania[index] = NULL;
-			users_germany[index] = NULL;
-			users_iceland[index] = the_user;
-			SSL_write(the_user->ssl, "Welcome to Iceland!\n", sizeof("Welcome to Iceland!\n"));
-		}	
+			else if(strncmp("/join", buffer, 5) == 0){
+				char * room = strtok(buffer, " \r\n");
+				room = strtok(NULL, " \r\n");
+				if(strcmp(room, "Iceland") == 0){
+					/* Add to chat room and make sure the user leaves other chat rooms*/	
+				int index = the_user->fd;
+				users_lithuania[index] = NULL;
+				users_germany[index] = NULL;
+				users_iceland[index] = the_user;
+				SSL_write(the_user->ssl, "Welcome to Iceland!\n", sizeof("Welcome to Iceland!\n"));
+				}	
 		 	
-		else if(strcmp(room, "Lithuania") == 0){
-			/* Add to chat room and make sure the user leaves other chat rooms*/	
-        	int index = the_user->fd;
-			users_iceland[index] = NULL;
-			users_germany[index] = NULL;
-            users_lithuania[index] = the_user;
-			SSL_write(the_user->ssl, "Welcome to Lithuania!\n", sizeof("Welcome to Iceland!\n"));
-        }
-		else if(strcmp(room, "Germany") == 0){
-			/* Add to chat room and make sure the user leaves other chat rooms*/	
-			int index = the_user->fd;
-			users_iceland[index] = NULL;
-			users_lithuania[index] = NULL;
-			users_germany[index] = the_user;
-			SSL_write(the_user->ssl, "Welcome to Germany!\n", sizeof("Welcome to Iceland!\n"));
-    	}
-		else{
-			printf("WARNING: Invalid chatroom\n");
+			else if(strcmp(room, "Lithuania") == 0){
+				/* Add to chat room and make sure the user leaves other chat rooms*/	
+        		int index = the_user->fd;
+				users_iceland[index] = NULL;
+				users_germany[index] = NULL;
+            	users_lithuania[index] = the_user;
+				SSL_write(the_user->ssl, "Welcome to Lithuania!\n", sizeof("Welcome to Iceland!\n"));
+        	}
+			else if(strcmp(room, "Germany") == 0){
+				/* Add to chat room and make sure the user leaves other chat rooms*/	
+				int index = the_user->fd;
+				users_iceland[index] = NULL;
+				users_lithuania[index] = NULL;
+				users_germany[index] = the_user;
+				SSL_write(the_user->ssl, "Welcome to Germany!\n", sizeof("Welcome to Iceland!\n"));
+    		}
+			else{
+				printf("WARNING: Invalid chatroom\n");
 		}
 		for(int i = 0; i < 1024; i++){
 			/* List users in chat rooms*/
@@ -139,8 +133,6 @@ struct user * users_germany[MAX_USERS];
 
 	/* If we get here it means there was no command, just a chat message*/
 	else{
-		//TODO SEND TO ALL
-		//
 
 		char temp[sizeof(buffer) + sizeof(usernames[fd]) + 7];
 		memset(temp, '\0', sizeof(temp));
@@ -149,21 +141,23 @@ struct user * users_germany[MAX_USERS];
 		strcat(temp, buffer);
 		for(int i = 0; i < MAX_USERS; i++){
 			if(all_users[i] != NULL){
-				
-				SSL_write(all_users[i]->ssl, temp, sizeof(temp));
+				if(i != fd){
+					if((users_iceland[i] != NULL && users_iceland[fd] != NULL) \
+						|| (users_lithuania[i] != NULL && users_lithuania[fd] != NULL) \
+						|| (users_germany[i] != NULL && users_germany[fd] != NULL))
+						{
+							SSL_write(all_users[i]->ssl, temp, sizeof(temp));
+						}
+				}
 			}
 		}
-
-
-		printf("DEBUG: inside 'this dude says' usernames[fd] is %s\n", usernames[fd]);
-		printf("%s says: %s\n", usernames[fd], buffer);
 	}
 
 }// ENDOF handle_request
 
 /*
  * A simple helper function to initialize some data
- */
+*/
 void initialize(){
 	for(int i = 0 ; i < MAX_USERS; i++ ){
     	client_sockets[i] = 0;
@@ -279,8 +273,6 @@ int main(int argc, char **argv)
             new_socket = accept(master_socket, (struct sockaddr *)&client, &len);
 			ERROR_CHECK_NEG(new_socket, "ERROR: Error during accept.\n");
 
-			printf("PORT %d\n", ntohs(client.sin_port));
-
 			server_log("connected", &client);
 	
 			/* SSL connection initialization */
@@ -295,9 +287,7 @@ int main(int argc, char **argv)
 			int n = SSL_read(newssl, buffer, sizeof(buffer)-1);
 		
 			buffer[n] = '\0';
-			printf("New client says: %s\n", buffer);
 
- 
             /* Add the new client socket and ssl to our array */
             for (int i = 0; i < MAX_USERS; i++) 
             {
