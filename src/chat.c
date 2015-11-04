@@ -154,22 +154,18 @@ void readline_callback(char *line)
         }
         if ((strncmp("/bye", line, 4) == 0) ||
             (strncmp("/quit", line, 5) == 0)) {
+				/* Sending command to server */
+				memset(buffer, '\0', sizeof(buffer));
+        		snprintf(buffer, 255, "%s\n", line);
+				SSL_write(server_ssl, buffer, sizeof(buffer));
                 rl_callback_handler_remove(); // cleaning up
                 active = 0;
                 return;
         }
         if (strncmp("/game", line, 5) == 0) {
                 /* Skip whitespace */
-                int i = 4;
-                while (line[i] != '\0' && isspace(line[i])) { i++; }
-                if (line[i] == '\0') {
-                        write(STDOUT_FILENO, "Usage: /game username\n",
-                              29);
-                        fsync(STDOUT_FILENO);
-                        rl_redisplay();
-                        return;
-                }
-                /* Start game */
+                printf("Invalid command, no game implemented\n.");/* roll dice and declare winner. */
+				fflush(stdout);
                 return;
         }
         if (strncmp("/join", line, 5) == 0) {
@@ -180,24 +176,42 @@ void readline_callback(char *line)
                 write(STDOUT_FILENO, "Usage: /join chatroom\n", 22);
                 fsync(STDOUT_FILENO);
                 rl_redisplay();
-//                return;
+				
+                return;
 			}
 
           	char *chatroom = strdup(&(line[i]));
 
             /* Process and send this information to the server. */
-            /* Maybe update the prompt. */
-            free(prompt);
-            prompt = NULL; /* What should the new prompt look like? */
-			rl_set_prompt(prompt);
-            //return;
+
+			memset(buffer, '\0', sizeof(buffer));
+        	snprintf(buffer, 255, "%s\n", line);
+			int x = SSL_write(server_ssl, buffer, sizeof(buffer));
+			memset(buffer, '\0', sizeof(buffer));
+			x = SSL_read(server_ssl, buffer, sizeof(buffer) - 1);
+			buffer[x] = '\0';
+			printf("%s",buffer);
+			fflush(stdout);
+			return;
     	}
+
         if (strncmp("/list", line, 5) == 0) {
-                /* Query all available chat rooms */
-//                return;
+
+			memset(buffer, '\0', sizeof(buffer));
+        	snprintf(buffer, 255, "%s\n", line);
+			int x = SSL_write(server_ssl, buffer, sizeof(buffer));
+			
+			memset(buffer, '\0', sizeof(buffer));
+			x = SSL_read(server_ssl, buffer, sizeof(buffer)-1);
+			buffer[x] = '\0';
+			printf("Available chat rooms: \n%s\n", buffer);
+            fflush(stdout);
+			return;	
         }
+
         if (strncmp("/roll", line, 5) == 0) {
-                /* roll dice and declare winner. */
+                printf("Invalid command, no game implemented\n.");/* roll dice and declare winner. */
+				fflush(stdout);
                 return;
         }
         if (strncmp("/say", line, 4) == 0) {
@@ -239,20 +253,38 @@ void readline_callback(char *line)
                 return;
             }
             char *new_user = strdup(&(line[i]));
-            char passwd[48];
-            getpasswd("Password: ", passwd, 48);
+            //char passwd[48];
+            //getpasswd("Password: ", passwd, 48);
 
             /* Process and send this information to the server. */
-
-            /* Maybe update the prompt. */
-            free(prompt);
-            prompt = NULL; /* What should the new prompt look like? */
-			rl_set_prompt(prompt);
-            return;
+			memset(buffer, '\0', sizeof(buffer));
+        	snprintf(buffer, 255, "%s", line);
+			SSL_write(server_ssl, buffer, sizeof(buffer));
+			
+			memset(buffer, '\0', sizeof(buffer));
+			int x = SSL_read(server_ssl, buffer, sizeof(buffer)-1);
+			buffer[x] = '\0';
+			printf("%s\n", buffer);
+			fflush(stdout);
+            
+			return;
         }
 
         if (strncmp("/who", line, 4) == 0) {
             /* Query all available users */
+			memset(buffer, '\0', sizeof(buffer));
+        	snprintf(buffer, 255, "%s\n", line);
+			SSL_write(server_ssl, buffer, sizeof(buffer));
+			
+			char users[100];
+			memset(users, '\0', sizeof(users));
+			int x = SSL_read(server_ssl, users, sizeof(users)-1);
+			if(x <= 0 ) printf("ERROR receiving !\n");
+			users[x] = '\0';
+			printf("Online users: \n");
+			printf("%s", users);
+			fflush(stdout);
+			
             return;
         }
 

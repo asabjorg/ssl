@@ -4,3 +4,9 @@ Protocol
 ========
 
 Explain your protocol here.
+
+
+ERRORS
+=====
+The /who command crashes the clients output,
+any command run after that will have wrong output

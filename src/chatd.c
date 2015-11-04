@@ -34,14 +34,26 @@
 #define ERROR_CHECK_NOT(status, msg) if(!status) { perror(msg); }
 #define ERROR_CHECK_NOT_NULL(status, msg) if((status == NULL)) { perror(msg); }
 
-const char * chat_rooms[3];
-struct user * users_iceland[1024];
-struct user * users_lithuania[1024];
-struct user * users_germany[1024];
+struct user * all_users[MAX_USERS];
+int client_sockets[MAX_USERS];	
+SSL * ssls[MAX_USERS];
+char * usernames[MAX_USERS];
 
+
+const char * chat_rooms[3];
+struct user * users_iceland[MAX_USERS];
+struct user * users_lithuania[MAX_USERS];
+struct user * users_germany[MAX_USERS];
+
+/*
+ * This method takes care of handling requests according
+ * to their prefix
+ * */
 void handle_request(char * buffer, SSL * ssl, struct user * the_user){
 	int status = 0;
-		
+	int fd = the_user->fd;
+	char * usern = the_user->username;
+	
 	if(strncmp("/list", buffer, 5) == 0){
 		char rooms[100];
 		memset(rooms, '\0', sizeof(rooms));
@@ -54,41 +66,99 @@ void handle_request(char * buffer, SSL * ssl, struct user * the_user){
 		ERROR_CHECK_NEG_OR_0(status, "ERROR: Error in sending chat rooms.\n");
 	}// ENFOF IF LIST
 
+	else if(strncmp("/who", buffer, 4) == 0){
+		char users[1000];
+		memset(users, '\0', sizeof(users));
+		for(int i = 0; i < MAX_USERS; i++){
+			if(all_users[i] != NULL){
+				char * usern = all_users[i]->username;
+				strcat(users, usern);
+				strcat(users, "\n");
+			}
+		}
+		strcat(users, "\0");
+		int n = SSL_write(the_user->ssl, users, sizeof(users));
+		if(n <= 0) printf("ERROR SENDING\n");
+
+
+	}//ENDOF IF WHO
+
+	else if(strncmp("/user", buffer, 5) == 0){
+		all_users[fd]->username = &buffer[6];
+		usernames[fd] = &buffer[6];
+		SSL_write(the_user->ssl, "Your username has been changed.\n", 
+			sizeof("Your username has been changed.\n"));
+
+	}//ENDOF IF USER
+
+
+
 	else if(strncmp("/join", buffer, 5) == 0){
 		char * room = strtok(buffer, " \n\r");
 		room = strtok(NULL, " \n\r");
 		if(strcmp(room, "Iceland") == 0){
-			
-			printf("user.fd inside if Iceland is %d\n",the_user->fd);
+			/* Add to chat room and make sure the user leaves other chat rooms*/	
 			int index = the_user->fd;
 			users_lithuania[index] = NULL;
 			users_germany[index] = NULL;
 			users_iceland[index] = the_user;
+			SSL_write(the_user->ssl, "Welcome to Iceland!\n", sizeof("Welcome to Iceland!\n"));
 		}	
 		 	
 		else if(strcmp(room, "Lithuania") == 0){
+			/* Add to chat room and make sure the user leaves other chat rooms*/	
         	int index = the_user->fd;
 			users_iceland[index] = NULL;
 			users_germany[index] = NULL;
             users_lithuania[index] = the_user;
+			SSL_write(the_user->ssl, "Welcome to Lithuania!\n", sizeof("Welcome to Iceland!\n"));
         }
 		else if(strcmp(room, "Germany") == 0){
+			/* Add to chat room and make sure the user leaves other chat rooms*/	
 			int index = the_user->fd;
 			users_iceland[index] = NULL;
 			users_lithuania[index] = NULL;
 			users_germany[index] = the_user;
+			SSL_write(the_user->ssl, "Welcome to Germany!\n", sizeof("Welcome to Iceland!\n"));
     	}
 		else{
-			printf("invalid chatroom\n");
+			printf("WARNING: Invalid chatroom\n");
 		}
 		for(int i = 0; i < 1024; i++){
+			/* List users in chat rooms*/
 			if(users_iceland[i] != NULL) printf("User %d is in room Iceland\n", users_iceland[i]->fd);
 			if(users_lithuania[i] != NULL) printf("User %d is in room Lithuania\n", users_lithuania[i]->fd);
 			if(users_germany[i] != NULL) printf("User %d is in room Germany\n", users_germany[i]->fd);
 		}
 			
 	}// ENDOF IF JOIN	
+
+	/* If we get here it means there was no command, just a chat message*/
+	else{
+		printf("%s says: %s\n", all_users[fd]->username, buffer);
+	}
+
 }// ENDOF handle_request
+
+/*
+ * A simple helper function to initialize some data
+ */
+void initialize(){
+	for(int i = 0 ; i < MAX_USERS; i++ ){
+    	client_sockets[i] = 0;
+        ssls[i] = NULL;
+        users_iceland[i] = NULL;
+        users_lithuania[i] = NULL;
+        users_germany[i] = NULL;
+		all_users[i] = NULL;
+		usernames[i] = "";
+    }
+
+    chat_rooms[0] = "Iceland";
+    chat_rooms[1] = "Lithuania";
+    chat_rooms[2] = "Germany";
+	
+}
 
 int main(int argc, char **argv)
 {
@@ -99,22 +169,11 @@ int main(int argc, char **argv)
 	struct sockaddr_in server, client;
     char buffer[4096];
 	SSL_CTX * ssl_ctx;
-	int client_sockets[MAX_USERS];	
-	SSL * ssls[MAX_USERS];
 	fd_set rfds;
 
-	for(int i = 0 ; i < MAX_USERS; i++ ){
-			client_sockets[i] = 0; 
-			ssls[i]=NULL;
-			users_iceland[i] = NULL;
-			users_lithuania[i] = NULL;
-			users_germany[i] = NULL;
-	}
-	
-	chat_rooms[0] = "Iceland";
-	chat_rooms[1] = "Lithuania";
-	chat_rooms[2] = "Germany";
-	
+	/* Calling a helper function to initialize some variables */
+	initialize();	
+
 	/* Load encryption and hasing algortihms, and error strings */
 	SSL_library_init();
 	SSL_load_error_strings();
@@ -195,30 +254,25 @@ int main(int argc, char **argv)
 		if (FD_ISSET(master_socket, &rfds)) 
         {
 
-            if ((new_socket = accept(master_socket, (struct sockaddr *)&client, (socklen_t*)&client))<0)
-            {
-                perror("accept");
-                exit(EXIT_FAILURE);
-            }
-          
+            new_socket = accept(master_socket, (struct sockaddr *)&client, (socklen_t*)&client);
+			ERROR_CHECK_NEG(new_socket, "ERROR: Error during accept.\n");
         		
-			// SSL SHIT
+			/* SSL connection initialization */
 			SSL * newssl = SSL_new(ssl_ctx);
 			SSL_set_fd(newssl, new_socket);
 			SSL_accept(newssl);
 				
-            //send new connection greeting message
+            /* Send a welcome message to our new client. */
             status = SSL_write(newssl, "Welcome.\n", sizeof("Welcome.\n"));
-              
-            printf("Welcome message sent with status %d\n", status);
+			ERROR_CHECK_NEG_OR_0(status, "ERROR: Error during welcome messge to new client.\n");              
 
-			int xx = SSL_read(newssl, buffer, sizeof(buffer)-1);
+			int n = SSL_read(newssl, buffer, sizeof(buffer)-1);
 		
-			buffer[xx] = '\0';
-			printf("--- %s\n", buffer);
+			buffer[n] = '\0';
+			printf("New client says: %s\n", buffer);
 
  
-            //add new socket to array of sockets
+            /* Add the new client socket and ssl to our array */
             for (int i = 0; i < MAX_USERS; i++) 
             {
                 //if position is empty
@@ -226,40 +280,69 @@ int main(int argc, char **argv)
                 {
                     client_sockets[i] = new_socket;
 					ssls[i] = newssl;
-                    printf("Adding to list of sockets as %d\n" , i);
-                     
                     break;
                 }
             }
+
+			/* Setting user info */
+			struct user * new_user = malloc(sizeof(struct user));
+			new_user->fd = new_socket;
+			new_user->ssl = newssl;
+			new_user->client = client;
+			new_user->username = "anonymous";	
+			usernames[new_socket] = "anonymous";
+			all_users[new_socket] = new_user;
+			
         }//endof if fd isset
 
-		//else its some IO operation on some other socket :)
+		/* Else it is a message from a previous client (not new) */
 		for (int i = 0; i < MAX_USERS; i++) 
         {
 			sd = client_sockets[i];
 			SSL * currSSL = ssls[i];
 			if (FD_ISSET( sd , &rfds)) 
             {
-
 			//Check if it was for closing , and also read the incoming message
 				if ((valread = SSL_read(currSSL, buffer, sizeof(buffer)-1)) == 0)
-                {//Somebody disconnected , get his details and print
+                {
+					/* The client has disconnected */
 					server_log("disconnected", &client);
-					//Close the socket and mark as 0 in list for reuse
+
+					/* Close the connection and clear all user data*/
 					close( sd );
 			        client_sockets[i] = 0;
 					ssls[i] = NULL;
+					all_users[sd] = NULL;
+					users_iceland[sd] = NULL;
+					users_lithuania[sd] = NULL;
+					users_germany[sd] = NULL;
+
 				}
 				else{
 					buffer[valread] = '\0';
                     //send(sd , buffer , strlen(buffer) , 0 );
-                    printf("--read: %s\n", buffer);
-					struct user * the_user = malloc(sizeof(struct user));
-					the_user->fd = sd;
-					the_user->ssl = currSSL;
-					the_user->client = client;
-			
-					handle_request(&buffer[0], currSSL, the_user);
+					struct user * the_user = all_users[sd];
+					if(the_user == NULL) {
+						printf("ERROR: User not found\n");
+						break;
+					}
+					
+			        if(strncmp("/bye", buffer, 4) == 0){
+    	        	    /* Close the connection and reset all user data*/
+						server_log("disconnected", &(all_users[sd]->client));
+						printf("%s has left the chat.\n", all_users[sd]->username);
+						close(sd);
+	        	        client_sockets[i] = 0;
+						ssls[i]= NULL;
+						all_users[sd] = NULL;
+						users_iceland[sd] = NULL;
+						users_germany[sd] = NULL;
+						users_lithuania[sd] = NULL;
+						
+					}		
+					else{
+						handle_request(&buffer[0], currSSL, the_user);
+					}
 				}
 			}
 		}

@@ -24,6 +24,7 @@ struct user{
 
 	int fd;
 	SSL *ssl;
+	char * username;
 	struct sockaddr_in client;
 
 };
