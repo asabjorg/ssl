@@ -279,13 +279,17 @@ int main(int argc, char **argv)
 	int status = 0, port_n;
 	struct sockaddr_in server, client;
 	char buffer[4096];
+    char *serverIP;
 
-    if(argc != 3){
-        printMsg("Incorrect number of arguments.");
+    /* Read server IP address */
+    serverIP = malloc(sizeof(&argv[1][0]));
+    if(!sscanf(&argv[1][0], "%s", serverIP) || strlen(serverIP) > 15){
+        printMsg("Incorrect IP format");
+        free(serverIP);
         return 0;
-    }
+    } 
 
-    /* Read in port number */
+    /* Read server port number */
     if(!sscanf(&argv[2][0], "%d", &port_n)){
         printMsg("Needs port number.");
         return 0;
@@ -332,9 +336,9 @@ int main(int argc, char **argv)
 	memset (&server, '\0', sizeof(server));
 	server.sin_family = AF_INET;
 	server.sin_port = htons(port_n);       /* Server Port number */
-	server.sin_addr.s_addr = inet_addr("127.0.0.1"); /* Server IP */
+	server.sin_addr.s_addr = inet_addr(serverIP); /* Server IP */
 
-    printf("Client is ready and running on port %d\n", port_n);
+    printf("Connecting to the server %s:%d \n", serverIP, port_n);
     fflush(stdout);
 
 	/* Establish a TCP/IP connection to the SSL client */
