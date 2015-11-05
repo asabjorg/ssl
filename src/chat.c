@@ -292,7 +292,7 @@ void readline_callback(char *line)
 
 			return;
         }
-
+  
         if (strncmp("/who", line, 4) == 0) {
             /* Query all available users */
 			memset(buffer, '\0', sizeof(buffer));
