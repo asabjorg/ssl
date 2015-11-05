@@ -53,9 +53,6 @@ struct user * users_germany[MAX_USERS];
 			int status = 0;
 			int fd = the_user->fd;
 
-			printf("USER NAME >|%s|\n", usernames[fd]);
-			fflush(stdout);
-			
 			if(strncmp("/list", buffer, 5) == 0){
 				char rooms[100];
 				memset(rooms, '\0', sizeof(rooms));
@@ -72,8 +69,8 @@ struct user * users_germany[MAX_USERS];
 				char users[1000];
 				memset(users, '\0', sizeof(users));
 				for(int i = 0; i < MAX_USERS; i++){
-					if(all_users[i] != NULL){
-						char * usern = usernames[fd];
+					if(all_users[i] != NULL && (i != fd)){
+						char * usern = usernames[i];
 						strcat(users, usern);
 						strcat(users, "\n");
 					}
@@ -149,7 +146,7 @@ struct user * users_germany[MAX_USERS];
 				SSL_write(the_user->ssl, "Welcome to Germany!\n", sizeof("Welcome to Iceland!\n"));
     		}
 			else{
-				printf("WARNING: Invalid chatroom\n");
+				SSL_write(the_user->ssl, "This chat room does not exist. Type /list to view available chat rooms.\n", 73); 
 		}
 		/* Lists user in a chat room, for debugging*/
 		/*for(int i = 0; i < 1024; i++){
