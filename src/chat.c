@@ -191,8 +191,6 @@ void readline_callback(char *line)
 			memset(buffer, '\0', sizeof(buffer));
 			x = SSL_read(server_ssl, buffer, sizeof(buffer) - 1);
 			buffer[x] = '\0';
-			printf("%s",buffer);
-			fflush(stdout);
 			return;
     	}
 
