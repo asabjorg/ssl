@@ -264,32 +264,50 @@ void readline_callback(char *line)
 			memset(buffer, '\0', sizeof(buffer));
 			int x = SSL_read(server_ssl, buffer, sizeof(buffer)-1);
 			buffer[x] = '\0';
-			printf("%s\n", buffer);
-			fflush(stdout);
 			
 			char passwd[48];
-			
-			if(strncmp(&buffer[0], "SIGNUP", 6) == 0){
-				char passwd2[48];
-				printf("Welcome new user! Please choose a new password.\n");	
-				fflush(stdout);
-				getpasswd("Password: ", passwd, 48);      
-				getpasswd("Retype password: ", passwd2, 48);
-				if(strcmp(passwd, passwd2) != 0){
-					printf("Passwords did not match, please try again.\n");
+			char * backup_username = strdup(&buffer[0]);
+			int count = 0;
+			while(count < 3){
+
+				if(strncmp(&buffer[0], "SIGNUP", 6) == 0){
+					char passwd2[48];
+					printf("Welcome new user! Please choose a new password.\n");	
+					fflush(stdout);
+					getpasswd("Password: ", passwd, 48);      
+					fflush(stdout);
+					getpasswd("Retype password: ", passwd2, 48);	
+					fflush(stdout);
+					if(strcmp(passwd, passwd2) != 0){
+						printf("Passwords did not match, please try again.\n");
+						return;
+					}
+					return;
+				} 
+				else{        
+					getpasswd("Password: ", passwd, 48);      
+				}
+	
+				unsigned long int hashed_pass = hash_pass(passwd);
+				char password[48];
+				memset(password, '\0', sizeof(password));
+				snprintf(password, sizeof(password), "%lu", hashed_pass);
+				SSL_write(server_ssl, password, sizeof(password));
+				count++;
+				memset(buffer, '\0', sizeof(buffer));
+				x = SSL_read(server_ssl, buffer, sizeof(buffer) -1);
+				buffer[x] = '\0';
+				if(strncmp("authenticated", &buffer[0], strlen("authenticated")) == 0){
 					return;
 				}
-			} 
-			else{        
-				getpasswd("Password: ", passwd, 48);      
+					printf("Incorrect password, please try again.\n");
+					fflush(stdout);
+				
 			}
-	
-			unsigned long int hashed_pass = hash_pass(passwd);
-			char password[48];
-			memset(password, '\0', sizeof(password));
-			snprintf(password, sizeof(password), "%lu", hashed_pass);
-			SSL_write(server_ssl, password, sizeof(password));
-
+			printf("To many trials, please try later.\n");
+			fflush(stdout);
+			SSL_write(server_ssl, "/kill", strlen("/kill"));
+			active = 0;
 			return;
         }
 

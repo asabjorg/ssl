@@ -134,6 +134,7 @@ int n;
 						msg[n] = '\0';
 						
 						if(strcmp(&msg[0], authentications[i]->password) == 0){
+							SSL_write(the_user->ssl, "authenticated", strlen("authenticated"));
 							return;
 						}else{
 							SSL_write(the_user->ssl, "Incorrect password.\n", sizeof("Incorrect password.\n"));
@@ -209,6 +210,26 @@ int n;
 		}*/
 			
 	}// ENDOF IF JOIN	
+	
+	else if(strncmp("/kill", buffer, 5) == 0){
+		printf("INFO: Closing connection to %s:%d.\n", inet_ntoa(all_users[fd]->client.sin_addr), ntohs(all_users[fd]->client.sin_port));	
+		
+		free(all_users[fd]);
+		all_users[fd] = NULL;
+
+		usernames[fd] = NULL;
+		users_iceland[fd] = NULL;
+		users_germany[fd] = NULL;
+		users_lithuania[fd] = NULL;
+
+		for(int i = 0; i < MAX_USERS; i++){
+			if(client_sockets[i] == fd){
+				client_sockets[i] = 0;
+				ssls[i] = NULL; 	
+			}
+		}
+		return;
+	}
 
 	/* If we get here it means there was no command, just a chat message*/
 	else{	/* Check if the user is in any chatroom */
@@ -234,7 +255,7 @@ int n;
 				}
 			}
 		}	
-	}		
+	}
 }// ENDOF handle_request
 
 /*
