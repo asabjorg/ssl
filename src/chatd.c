@@ -66,17 +66,24 @@ struct user * users_germany[MAX_USERS];
 			}// ENFOF IF LIST
 
 			else if(strncmp("/who", buffer, 4) == 0){
-				char users[1000];
-				memset(users, '\0', sizeof(users));
+				char online_users[4096];
+				char * chat_room = NULL;
+
+				memset(online_users, '\0', sizeof(online_users));
+
 				for(int i = 0; i < MAX_USERS; i++){
 					if(all_users[i] != NULL && (i != fd)){
-						char * usern = usernames[i];
-						strcat(users, usern);
-						strcat(users, "\n");
+						
+						chat_room = "none";
+						if(users_iceland[i] != NULL) { chat_room = "Iceland"; }
+						if(users_lithuania[i] != NULL) { chat_room = "Lithuania"; }
+						if(users_germany[i] != NULL) { chat_room = "Germany"; }
+						snprintf(online_users, sizeof(online_users), "%s-%s, Address: %s:%d, Chatroom: %s\n", 
+							online_users, usernames[i], inet_ntoa(all_users[i]->client.sin_addr), ntohs(all_users[i]->client.sin_port), chat_room);
 					}
 				}
-				strcat(users, "\0");
-				int n = SSL_write(the_user->ssl, users, sizeof(users));
+				strcat(online_users, "\0");
+				int n = SSL_write(the_user->ssl, online_users, sizeof(online_users));
 				if(n <= 0) printf("ERROR SENDING\n");
 
 
@@ -158,7 +165,11 @@ struct user * users_germany[MAX_USERS];
 	}// ENDOF IF JOIN	
 
 	/* If we get here it means there was no command, just a chat message*/
-	else{
+	else{	/* Check if the user is in any chatroom */
+		if(users_iceland[fd] == NULL && users_germany[fd] == NULL && users_lithuania[fd] == NULL){
+			SSL_write(all_users[fd]->ssl, "Join a chat room to enable chatting.\n", 40);
+			return;
+		}
 
 		char temp[sizeof(buffer) + sizeof(usernames[fd]) + 7];
 		memset(temp, '\0', sizeof(temp));
@@ -169,16 +180,15 @@ struct user * users_germany[MAX_USERS];
 			if(all_users[i] != NULL){
 				if(i != fd){
 					if((users_iceland[i] != NULL && users_iceland[fd] != NULL) \
-						|| (users_lithuania[i] != NULL && users_lithuania[fd] != NULL) \
-						|| (users_germany[i] != NULL && users_germany[fd] != NULL))
-						{
-							SSL_write(all_users[i]->ssl, temp, sizeof(temp));
-						}
+							|| (users_lithuania[i] != NULL && users_lithuania[fd] != NULL) \
+							|| (users_germany[i] != NULL && users_germany[fd] != NULL)){
+
+						SSL_write(all_users[i]->ssl, temp, sizeof(temp));
+					}
 				}
 			}
-		}
-	}
-
+		}	
+	}		
 }// ENDOF handle_request
 
 /*
