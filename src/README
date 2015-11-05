@@ -8,13 +8,45 @@ When a user starts the chat client the certificate and private
 key get loaded and checked. The same thing happens when the
 server gets started. 
 
+We use simple arrays to keep track of all data, using the client's
+file descriptor as an array, that way we can access all data
+on constant time.
+
 PROTOCOL
 ========
 Explain your protocol here.
 
+By default the user is assigned "anonymous" as a username.
+User can change the username using the following command:
+		/user new_username
+
+Users can see a list of available chat rooms by using the
+following command
+		/list
+
+A user can then join a chatroom by using the command 
+below, if a user joins another chat room, he/she will
+automatically leave the one he/she is currently in.
+		/join name_of_chatroom
+
+A user can send a private message to a single other 
+user by using the following command and syntax:
+		/say username message
+
+A user can see a list of available users by issuing
+the following command:
+		/who
+
+A user can disconnect from the chat by issuing
+the following command
+		/bye
+
+ANSWERS TO QUESTIONS
+===================
 
 Part 5. Passwords should be stored encrypted in a database on
 the server side. 
+
 Part 6. Private messages should NOT be stored anywhere because
 we respect our user's privacy.
 The consequences of this decision would be that no previous
@@ -27,4 +59,14 @@ IMPLEMENTATION ERRORS
 -The /who command crashes the clients output,
 any command run after that will have wrong output.
 -The /user command changes the username at first but
-afterwards for some reason it gets lost
+afterwards it seems to get lost. If the instructor
+notices the reason why, we would appriciate being
+informed about why this is happening.
+
+REFERENCES
+=========
+For implementing multiple connections and SSL we partially based
+our code on these examples: 
+http://h71000.www7.hp.com/doc/83final/ba554_90007/ch05s03.html
+http://h71000.www7.hp.com/doc/83final/ba554_90007/ch05s04.html
+http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/

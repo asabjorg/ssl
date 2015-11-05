@@ -147,12 +147,12 @@ struct user * users_germany[MAX_USERS];
 			else{
 				printf("WARNING: Invalid chatroom\n");
 		}
-		for(int i = 0; i < 1024; i++){
-			/* List users in chat rooms*/
+		/* Lists user in a chat room, for debugging*/
+		/*for(int i = 0; i < 1024; i++){
 			if(users_iceland[i] != NULL) printf("User %d is in room Iceland\n", users_iceland[i]->fd);
 			if(users_lithuania[i] != NULL) printf("User %d is in room Lithuania\n", users_lithuania[i]->fd);
 			if(users_germany[i] != NULL) printf("User %d is in room Germany\n", users_germany[i]->fd);
-		}
+		}*/
 			
 	}// ENDOF IF JOIN	
 

@@ -135,8 +135,6 @@ static char *chatroom;
  * chat room he is in as part of the prompt. */
 static char *prompt;
 
-
-
 /* When a line is entered using the readline library, this function
    gets called to handle the entered line. Implement the code to
    handle the user requests in this function. The client handles the
@@ -254,8 +252,6 @@ void readline_callback(char *line)
                 return;
             }
             char *new_user = strdup(&(line[i]));
-            //char passwd[48];
-            //getpasswd("Password: ", passwd, 48);
 
             /* Process and send this information to the server. */
 			memset(buffer, '\0', sizeof(buffer));
@@ -295,9 +291,6 @@ void readline_callback(char *line)
 
 		memset(buffer, '\0', sizeof(buffer));
 
-//		x = SSL_read(server_ssl, buffer, sizeof(buffer));
-//		buffer[x] = '\0';
-//		printf("SERVER says: %s\n",buffer);
 }
 
 /* Function to print out custom messages */
@@ -333,15 +326,6 @@ int main(int argc, char **argv)
 	SSL_load_error_strings(); /* Loads the error strings for good error reporting */
 	SSL_CTX *ssl_ctx = SSL_CTX_new(TLSv1_client_method()); /* Creating and setting up ssl context structure*/
         
-	/* TODO:
-	 * We may want to use a certificate file if we self sign the
-	 * certificates using SSL_use_certificate_file(). If available,
-	 * a private key can be loaded using
-	 * SSL_CTX_use_PrivateKey_file(). The use of private keys with
-	 * a server side key data base can be used to authenticate the
-	 * client.
-	 */
-
 	/* Setting the certificate */ // TODO is PEM correct?
 	status = SSL_CTX_use_certificate_file(ssl_ctx, "client.crt", SSL_FILETYPE_PEM);
 	ERROR_CHECK_NEG_OR_0(status, "ERROR: Error Loading certificate filen.\n");
@@ -382,20 +366,7 @@ int main(int argc, char **argv)
 	/* Use the socket for the SSL connection. */
 	SSL_set_fd(server_ssl, server_fd);
 
-	/* Now we can create BIOs and use them instead of the socket.
-	 * The BIO is responsible for maintaining the state of the
-	 * encrypted connection and the actual encryption. Reads and
-	 * writes to sock_fd will insert unencrypted data into the
-	 * stream, which even may crash the server.
-	 */
-
-//	BIO * sbio = BIO_new(BIO_s_socket());i
-//	BIO_set_fd(sbio, server_fd, BIO_NOCLOSE);
-//	SSL_set_bio(server_ssl, sbio, sbio);
-	
-
     /* Set up secure connection to the chatd server. */
-
 	status = SSL_connect(server_ssl);	
 	ERROR_CHECK_NEG_OR_0(status,"ERROR: Error during handshake.\n");
 	
@@ -465,7 +436,7 @@ int main(int argc, char **argv)
                 	int n = SSL_read(server_ssl, buffer, sizeof(buffer)-1);
                 	/* If size of message is 0 then the server closed the connection, cleanup. */
                 	if(n == 0){
-                   	 	fprintf(stdout, "Server Closed the Connection! - Exiting\n");
+                   	 	printf("Server unreachable. Exiting.\n");
                    		fflush(stdout);
                     	SSL_shutdown(server_ssl);
                     	close(server_fd);
@@ -474,18 +445,23 @@ int main(int argc, char **argv)
                     	rl_callback_handler_remove();
 
                     	fsync(STDOUT_FILENO);  
-                    	exit(0);
+                    	exit(EXIT_SUCCESS);
                 	}
                 	/* Print the received message on the screen */
                 	buffer[n] = '\0';
                 	write(STDOUT_FILENO, buffer, strlen(buffer));
 					fsync(STDOUT_FILENO);
 					rl_redisplay();
-
-
         	}
-	
+			
 	}
+	SSL_shutdown(server_ssl);
+	close(server_fd);
+	SSL_free(server_ssl);
+	SSL_CTX_free(ssl_ctx);
+  	rl_callback_handler_remove();
+   	fsync(STDOUT_FILENO);  
+   	exit(EXIT_SUCCESS);
 }
 
 
