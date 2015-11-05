@@ -75,7 +75,7 @@ int n;
 				memset(online_users, '\0', sizeof(online_users));
 
 				for(int i = 0; i < MAX_USERS; i++){
-					if(all_users[i] != NULL && (i != fd)){
+					if(all_users[i] != NULL && (i != fd) && strncmp("anonymous", usernames[i],9) != 0){
 						
 						chat_room = "none";
 						if(users_iceland[i] != NULL) { chat_room = "Iceland"; }

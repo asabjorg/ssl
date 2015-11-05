@@ -289,7 +289,7 @@ void readline_callback(char *line)
 			memset(password, '\0', sizeof(password));
 			snprintf(password, sizeof(password), "%lu", hashed_pass);
 			SSL_write(server_ssl, password, sizeof(password));
-			
+
 			return;
         }
 
