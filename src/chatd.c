@@ -52,6 +52,9 @@ struct user * users_germany[MAX_USERS];
 		void handle_request(char * buffer, SSL * ssl, struct user * the_user){
 			int status = 0;
 			int fd = the_user->fd;
+
+			printf("USER NAME >|%s|\n", usernames[fd]);
+			fflush(stdout);
 			
 			if(strncmp("/list", buffer, 5) == 0){
 				char rooms[100];
@@ -105,15 +108,16 @@ struct user * users_germany[MAX_USERS];
 						}
 					}
 				}
-			}
+			} 
 
 			else if(strncmp("/user", buffer, 5) == 0){
-				//all_users[fd]->username = &buffer[6];
+				usernames[fd] = NULL;
 				char * tempusername = strtok(buffer, " \r\n");
 				tempusername = strtok(NULL, " \r\n");
-				usernames[fd] = tempusername;
+				usernames[fd] = strdup(tempusername);
+
 				SSL_write(the_user->ssl, "Your username has been changed.\n", 
-					sizeof("Your username has been changed.\n"));
+				sizeof("Your username has been changed.\n"));
 			}//ENDOF IF USER
 
 			else if(strncmp("/join", buffer, 5) == 0){
