@@ -262,8 +262,6 @@ void readline_callback(char *line)
 			memset(buffer, '\0', sizeof(buffer));
 			int x = SSL_read(server_ssl, buffer, sizeof(buffer)-1);
 			buffer[x] = '\0';
-			printf("%s\n", buffer);
-			fflush(stdout);
 			
 			char passwd[48];
 			
@@ -350,7 +348,7 @@ int main(int argc, char **argv)
 	SSL_load_error_strings(); /* Loads the error strings for good error reporting */
 	SSL_CTX *ssl_ctx = SSL_CTX_new(TLSv1_client_method()); /* Creating and setting up ssl context structure*/
         
-	/* Setting the certificate */ // TODO is PEM correct?
+	/* Setting the certificate */ 
 	status = SSL_CTX_use_certificate_file(ssl_ctx, "client.crt", SSL_FILETYPE_PEM);
 	ERROR_CHECK_NEG_OR_0(status, "ERROR: Error Loading certificate filen.\n");
 	

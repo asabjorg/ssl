@@ -164,8 +164,8 @@ int n;
 				authentications[index]->username = strdup(tempusername);
 				authentications[index]->password = strdup((char *)&msg[0]);
 
-				SSL_write(the_user->ssl, "Your username has been changed.\n", 
-					sizeof("Your username has been changed.\n"));
+				SSL_write(the_user->ssl, "You have signed up successfully.\n", 
+					sizeof("You have signed up successfully.\n"));
 				
 				server_log("authenticated", &all_users[fd]->client, usernames[fd]);
 			}//ENDOF IF USER

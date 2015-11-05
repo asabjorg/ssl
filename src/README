@@ -17,7 +17,8 @@ PROTOCOL
 Explain your protocol here.
 
 By default the user is assigned "anonymous" as a username.
-User can change the username using the following command:
+User can change the username and register using the 
+following command:
 		/user new_username
 
 Users can see a list of available chat rooms by using the
@@ -52,16 +53,6 @@ we respect our user's privacy.
 The consequences of this decision would be that no previous
 private messages are ever reachable, however our user's
 privacy will never be breached.
-
-
-IMPLEMENTATION ERRORS
-====================
--The /who command crashes the clients output,
-any command run after that will have wrong output.
--The /user command changes the username at first but
-afterwards it seems to get lost. If the instructor
-notices the reason why, we would appriciate being
-informed about why this is happening.
 
 REFERENCES
 =========
