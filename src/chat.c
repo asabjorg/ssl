@@ -336,6 +336,13 @@ int main(int argc, char **argv)
         free(serverIP);
         return 0;
     } 
+ 
+    // converts argument localhost to IP number
+    if(strncmp("localhost", serverIP, strlen(serverIP)) == 0) {
+        free(serverIP);
+        serverIP = malloc(sizeof("127.0.0.1"));
+        serverIP = "127.0.0.1";
+    }
 
     /* Read server port number */
     if(!sscanf(&argv[2][0], "%d", &port_n)){
