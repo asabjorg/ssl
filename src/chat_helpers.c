@@ -1,4 +1,3 @@
-
 #include <assert.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -13,10 +12,11 @@
 #include <time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "chat.h"
 #include <sys/stat.h>
 #include <crypt.h>
 
+
+#include "chat.h"
 
 /* A helper function to check if the port number is
  * missing or invalid*/
@@ -47,8 +47,8 @@ void client_startup_check(int argc, char * argv[]){
 		exit(EXIT_FAILURE);
 	}	
 }
-
-void server_log(const char *msg, struct sockaddr_in * client){
+/* A helper function for logging */
+void server_log(const char *msg, struct sockaddr_in * client, char * username){
 	FILE *fd;
     struct stat st = {0};
 
@@ -62,44 +62,32 @@ void server_log(const char *msg, struct sockaddr_in * client){
         exit(EXIT_FAILURE);
     }
 
-    /*
-    	althernative way for reading IP address
-		int ipAddr = client->sin_addr.s_addr;
-		char ip_string[INET_ADDRSTRLEN];
-		inet_ntop( AF_INET, &ipAddr, ip_string, INET_ADDRSTRLEN );
-    */
     char timestamp[100];
     memset(timestamp, '\0', sizeof(timestamp));
     time_t now = time(NULL);
     struct tm *t = localtime(&now);
     strftime(timestamp, sizeof(timestamp)-1, "%Y-%m-%dT%H:%M:%S%z", t);
 
-    fprintf(fd, "%s : %s:%d %s\n", timestamp, inet_ntoa(client->sin_addr), ntohs(client->sin_port), msg);
+	if(username == NULL){
+	    fprintf(fd, "%s : %s:%d %s\n", timestamp, inet_ntoa(client->sin_addr), ntohs(client->sin_port), msg);
+	}
+	else{
+	    fprintf(fd, "%s : %s:%d %s %s\n", timestamp, inet_ntoa(client->sin_addr), ntohs(client->sin_port), username, msg);
+	}
     fclose(fd);
 }
 
-long int construct_client_key(struct sockaddr_in * client){
-	
-	char key[40];
-	snprintf(key, 40, "%d%d", client->sin_addr.s_addr, ntohs(client->sin_port));
-	long int longint = atol(key);
-	printf(" in helpers %ld\n", longint);
-	return longint;
-}
+/* 
+ * Hash function.
+ * REFERENCE: http://www.cse.yorku.ca/~oz/hash.html 
+ */
+unsigned long hash_pass(char *str){
+	unsigned long hash = 5381;
+    int c;
 
-char * encrypt_pass(char * pass){
-	unsigned long seed[2];
- 	char salt[] = "$1$........";
- 	const char *const seedchars =
-         "./0123456789ABCDEFGHIJKLMNOPQRST" "UVWXYZabcdefghijklmnopqrstuvwxyz";
-    char *password;
-    int i;
-  	seed[0] = time(NULL);
-    seed[1] = getpid() ^ (seed[0] >> 14 & 0x30000);
-	for (i = 0; i < 8; i++){
-    	salt[3+i] = seedchars[(seed[i/5] >> (i%5)*6) & 0x3f];
-    }
+    while((c = *str++)){
+        hash = ((hash << 5) + hash) + c;
+	}
 
-    password = crypt(pass, salt);
-	return password;
+   	return hash;
 }

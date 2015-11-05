@@ -111,14 +111,19 @@ int n;
 				for(int i = 0; i < MAX_USERS; i++){
 					if(all_users[i] != NULL){
 						if(strcmp(usernames[i], to) == 0){
-							SSL_write(all_users[i]->ssl, privmsg, sizeof(privmsg));
+							char * buf = usernames[fd];
+							strcat(buf, " says: ");
+							strcat(buf, privmsg); 
+							strcat(buf, "\n"); 
+							SSL_write(all_users[i]->ssl, buf, strlen(buf));
 						}
 					}
 				}
 			} 
 
 			else if(strncmp("/user", buffer, 5) == 0){
-				unsigned char msg[256];
+				char msg[256];
+				memset(msg, '\0', sizeof(msg));
 				char * tempusername = strtok(buffer, " \r\n");
 				tempusername = strtok(NULL, " \r\n");
 
@@ -128,11 +133,13 @@ int n;
 						n = SSL_read(the_user->ssl, msg, sizeof(msg));
 						msg[n] = '\0';
 						
-						if(strncmp((char *)&msg[0], authentications[i]->password, strlen((char *)msg)) == 0){
-							
-							printf("match\n");
+						if(strcmp(&msg[0], authentications[i]->password) == 0){
 							return;
-						}else{printf("NOT MATCH\n"); return;}	
+						}else{
+							SSL_write(the_user->ssl, "Incorrect password.\n", sizeof("Incorrect password.\n"));
+							server_log("authentication error", &all_users[fd]->client, tempusername);
+							return;
+						}	
 					}
 				}
 				
@@ -159,6 +166,8 @@ int n;
 
 				SSL_write(the_user->ssl, "Your username has been changed.\n", 
 					sizeof("Your username has been changed.\n"));
+				
+				server_log("authenticated", &all_users[fd]->client, usernames[fd]);
 			}//ENDOF IF USER
 
 			else if(strncmp("/join", buffer, 5) == 0){
@@ -348,7 +357,7 @@ int main(int argc, char **argv)
             new_socket = accept(master_socket, (struct sockaddr *)&client, &len);
 			ERROR_CHECK_NEG(new_socket, "ERROR: Error during accept.\n");
 
-			server_log("connected", &client);
+			server_log("connected", &client, NULL);
 	
 			/* SSL connection initialization */
 			SSL * newssl = SSL_new(ssl_ctx);
@@ -397,7 +406,7 @@ int main(int argc, char **argv)
                 {
 					buffer[valread] = '\0';
 					/* The client has disconnected */
-					server_log("disconnected", &client);
+					server_log("disconnected", &client, NULL);
 
 					/* Close the connection and clear all user data*/
 					close( sd );
@@ -422,7 +431,7 @@ int main(int argc, char **argv)
 					
 			        if(strncmp("/bye", buffer, 4) == 0){
     	        	    /* Close the connection and reset all user data*/
-						server_log("disconnected", &(all_users[sd]->client));
+						server_log("disconnected", &(all_users[sd]->client), NULL);
 						printf("%s has left the chat.\n", usernames[sd]);
 						close(sd);
 	        	        client_sockets[i] = 0;

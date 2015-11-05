@@ -1,5 +1,4 @@
 #include <glib.h>
-
 #include <openssl/ssl.h>
 
 struct user{
@@ -22,8 +21,6 @@ void client_startup_check(int argc, char * argv[]);
 
 void handle_request(char * buffer, SSL * ssl, struct user * the_user);
 
-void server_log(const char *msg, struct sockaddr_in * client);
+void server_log(const char *msg, struct sockaddr_in * client, char * username);
 
-long int construct_client_key(struct sockaddr_in * client);
-
-char * encrypt_pass(char * pass);
+unsigned long hash_pass(char *str);

@@ -273,7 +273,7 @@ void readline_callback(char *line)
 				char passwd2[48];
 				printf("Welcome new user! Please choose a new password.\n");	
 				fflush(stdout);
-				getpasswd("111Password: ", passwd, 48);      
+				getpasswd("Password: ", passwd, 48);      
 				getpasswd("Retype password: ", passwd2, 48);
 				if(strcmp(passwd, passwd2) != 0){
 					printf("Passwords did not match, please try again.\n");
@@ -281,10 +281,13 @@ void readline_callback(char *line)
 				}
 			} 
 			else{        
-				getpasswd("111Password: ", passwd, 48);      
+				getpasswd("Password: ", passwd, 48);      
 			}
 	
-			char *password = encrypt_pass(passwd);
+			unsigned long int hashed_pass = hash_pass(passwd);
+			char password[48];
+			memset(password, '\0', sizeof(password));
+			snprintf(password, sizeof(password), "%lu", hashed_pass);
 			SSL_write(server_ssl, password, sizeof(password));
 			
 			return;
@@ -378,7 +381,7 @@ int main(int argc, char **argv)
 	server.sin_port = htons(port_n);       /* Server Port number */
 	server.sin_addr.s_addr = inet_addr(serverIP); /* Server IP */
 
-    printf("Connecting to the server %s:%d \n", serverIP, port_n);
+    printf("INFO: Connecting to the server %s:%d \n", serverIP, port_n);
     fflush(stdout);
 
 	/* Establish a TCP/IP connection to the SSL client */
@@ -402,7 +405,7 @@ int main(int argc, char **argv)
 	status = SSL_read(server_ssl, buffer, sizeof(buffer)-1);
     buffer[status] = '\0';
 	if(strcmp(buffer, "Welcome.\n") != 0){
-		printf("DEBUG: Not equal\n");
+		printf("ERROR: Error reading welcome message from server.\n");
 	}
 		
 	int max_fd;
@@ -441,7 +444,6 @@ int main(int argc, char **argv)
                     break;
 			}
     		if (r == 0) {
-            	write(STDOUT_FILENO, "No message?\n", 12);
                 fsync(STDOUT_FILENO);
                 /* Whenever you print out a message, call this
                          to reprint the current input line. */
@@ -459,7 +461,7 @@ int main(int argc, char **argv)
                 	int n = SSL_read(server_ssl, buffer, sizeof(buffer)-1);
                 	/* If size of message is 0 then the server closed the connection, cleanup. */
                 	if(n == 0){
-                   	 	printf("Server unreachable. Exiting.\n");
+                   	 	printf("INFO: Server unreachable. Exiting.\n");
                    		fflush(stdout);
                     	SSL_shutdown(server_ssl);
                     	close(server_fd);
