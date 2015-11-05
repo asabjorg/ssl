@@ -15,6 +15,8 @@
 #include <arpa/inet.h>
 #include "chat.h"
 #include <sys/stat.h>
+#include <crypt.h>
+
 
 /* A helper function to check if the port number is
  * missing or invalid*/
@@ -83,4 +85,21 @@ long int construct_client_key(struct sockaddr_in * client){
 	long int longint = atol(key);
 	printf(" in helpers %ld\n", longint);
 	return longint;
+}
+
+char * encrypt_pass(char * pass){
+	unsigned long seed[2];
+ 	char salt[] = "$1$........";
+ 	const char *const seedchars =
+         "./0123456789ABCDEFGHIJKLMNOPQRST" "UVWXYZabcdefghijklmnopqrstuvwxyz";
+    char *password;
+    int i;
+  	seed[0] = time(NULL);
+    seed[1] = getpid() ^ (seed[0] >> 14 & 0x30000);
+	for (i = 0; i < 8; i++){
+    	salt[3+i] = seedchars[(seed[i/5] >> (i%5)*6) & 0x3f];
+    }
+
+    password = crypt(pass, salt);
+	return password;
 }

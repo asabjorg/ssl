@@ -38,12 +38,15 @@ struct user * all_users[MAX_USERS];
 int client_sockets[MAX_USERS];	
 SSL * ssls[MAX_USERS];
 char * usernames[MAX_USERS];
-
+char * passwords[MAX_USERS];
+struct authentication * authentications[MAX_USERS];
 
 const char * chat_rooms[3];
 struct user * users_iceland[MAX_USERS];
 struct user * users_lithuania[MAX_USERS];
 struct user * users_germany[MAX_USERS];
+
+int n;
 
 /*
  * This method takes care of handling requests according
@@ -83,7 +86,7 @@ struct user * users_germany[MAX_USERS];
 					}
 				}
 				strcat(online_users, "\0");
-				int n = SSL_write(the_user->ssl, online_users, sizeof(online_users));
+				n = SSL_write(the_user->ssl, online_users, sizeof(online_users));
 				if(n <= 0) printf("ERROR SENDING\n");
 
 
@@ -115,13 +118,47 @@ struct user * users_germany[MAX_USERS];
 			} 
 
 			else if(strncmp("/user", buffer, 5) == 0){
-				usernames[fd] = NULL;
+				unsigned char msg[256];
 				char * tempusername = strtok(buffer, " \r\n");
 				tempusername = strtok(NULL, " \r\n");
+
+				for(int i = 0; i < MAX_USERS; i++){
+					if(authentications[i] != NULL && strncmp(authentications[i]->username, tempusername, strlen(tempusername)) == 0){
+						SSL_write(the_user->ssl, "SIGNIN", 6);
+						n = SSL_read(the_user->ssl, msg, sizeof(msg));
+						msg[n] = '\0';
+						
+						if(strncmp((char *)&msg[0], authentications[i]->password, strlen((char *)msg)) == 0){
+							
+							printf("match\n");
+							return;
+						}else{printf("NOT MATCH\n"); return;}	
+					}
+				}
+				
+				n = SSL_write(the_user->ssl, "SIGNUP", 6);
+				n = SSL_read(the_user->ssl, msg, sizeof(msg));
+				msg[n] = '\0';
+
+				/* save encrypted passw */
+				int index = -1;
+				for(int i = 0; i < MAX_USERS; i++){
+					if(authentications[i] == NULL) {
+						index = i;
+						break;	
+					}		
+				}
+
 				usernames[fd] = strdup(tempusername);
+				passwords[fd] = strdup((char *)&msg[0]);
+								
+				authentications[index] = malloc(sizeof(struct authentications *));
+
+				authentications[index]->username = strdup(tempusername);
+				authentications[index]->password = strdup((char *)&msg[0]);
 
 				SSL_write(the_user->ssl, "Your username has been changed.\n", 
-				sizeof("Your username has been changed.\n"));
+					sizeof("Your username has been changed.\n"));
 			}//ENDOF IF USER
 
 			else if(strncmp("/join", buffer, 5) == 0){
@@ -203,6 +240,8 @@ void initialize(){
         users_germany[i] = NULL;
 		all_users[i] = NULL;
 		usernames[i] = 	NULL;
+		passwords[i] = 	NULL;
+		authentications[i] = NULL;
     }
 
     chat_rooms[0] = "Iceland";
@@ -320,7 +359,7 @@ int main(int argc, char **argv)
             status = SSL_write(newssl, "Welcome.\n", sizeof("Welcome.\n"));
 			ERROR_CHECK_NEG_OR_0(status, "ERROR: Error during welcome messge to new client.\n");              
 
-			int n = SSL_read(newssl, buffer, sizeof(buffer)-1);
+			n = SSL_read(newssl, buffer, sizeof(buffer)-1);
 		
 			buffer[n] = '\0';
 
@@ -368,6 +407,8 @@ int main(int argc, char **argv)
 					users_iceland[sd] = NULL;
 					users_lithuania[sd] = NULL;
 					users_germany[sd] = NULL;
+					usernames[sd] = NULL;
+					passwords[sd] = NULL;
 
 				}
 				else{
@@ -390,6 +431,8 @@ int main(int argc, char **argv)
 						users_iceland[sd] = NULL;
 						users_germany[sd] = NULL;
 						users_lithuania[sd] = NULL;
+						usernames[sd] = NULL;
+						passwords[sd] = NULL;
 						
 					}		
 					else{

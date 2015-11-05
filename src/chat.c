@@ -24,6 +24,7 @@
 
 /* Secure socket layer headers */
 #include <openssl/ssl.h>
+#include <openssl/sha.h>
 #include <openssl/err.h>
 /* BIO*/
 #include <openssl/bio.h>
@@ -32,6 +33,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+/* Hashing */
+#include <crypt.h>
 
 /* Defines */
 #define RETURN_ERR(err,s) if ((err)==-1) { perror(s); exit(1); }
@@ -251,19 +254,39 @@ void readline_callback(char *line)
                 rl_redisplay();
                 return;
             }
-            char *new_user = strdup(&(line[i]));
 
             /* Process and send this information to the server. */
 			memset(buffer, '\0', sizeof(buffer));
         	snprintf(buffer, 255, "%s", line);
 			SSL_write(server_ssl, buffer, sizeof(buffer));
-			
+
+			/* Get response from server, telling us if this is a new username or not */						
 			memset(buffer, '\0', sizeof(buffer));
 			int x = SSL_read(server_ssl, buffer, sizeof(buffer)-1);
 			buffer[x] = '\0';
 			printf("%s\n", buffer);
 			fflush(stdout);
-            
+			
+			char passwd[48];
+			
+			if(strncmp(&buffer[0], "SIGNUP", 6) == 0){
+				char passwd2[48];
+				printf("Welcome new user! Please choose a new password.\n");	
+				fflush(stdout);
+				getpasswd("111Password: ", passwd, 48);      
+				getpasswd("Retype password: ", passwd2, 48);
+				if(strcmp(passwd, passwd2) != 0){
+					printf("Passwords did not match, please try again.\n");
+					return;
+				}
+			} 
+			else{        
+				getpasswd("111Password: ", passwd, 48);      
+			}
+	
+			char *password = encrypt_pass(passwd);
+			SSL_write(server_ssl, password, sizeof(password));
+			
 			return;
         }
 
